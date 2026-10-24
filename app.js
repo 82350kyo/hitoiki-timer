@@ -17,16 +17,19 @@ function render(){const ms=remaining(s),seconds=Math.ceil(ms/1000),min=Math.floo
  const active=s.running || (ms>0 && ms<s.minutes*60000);document.querySelectorAll('[data-mode],[data-minutes],#minutes,#scale').forEach(el=>el.disabled=active);
  document.querySelectorAll('[data-mode]').forEach(el=>el.setAttribute('aria-pressed',el.dataset.mode===s.mode));document.querySelectorAll('[data-minutes]').forEach(el=>{el.setAttribute('aria-pressed',Number(el.dataset.minutes)===s.minutes);el.disabled=active||Number(el.dataset.minutes)>s.scale;});
  $('status').textContent=s.running?(s.mode==='focus'?'ひとつのことに、集中。':'ゆっくり、ひと休み。'):ms===0?'おつかれさまでした':active?'一時停止中':'集中する準備はできましたか';
- $('start').innerHTML=s.running?'Ⅱ<span>一時停止</span>':`▶<span>${ms===0?'もう一度':active?'再開する':'はじめる'}</span>`;
+ const startHtml=s.running?'Ⅱ<span>一時停止</span>':`▶<span>${ms===0?'もう一度':active?'再開する':'はじめる'}</span>`;
+ if($('start').innerHTML!==startHtml)$('start').innerHTML=startHtml;
  $('finish').textContent=s.running?`${new Date(s.endAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})} に終了予定`:ms===0?(s.mode==='focus'?'集中できました。ひと休みしましょう。':'休憩できました。次の集中へ。'):`${s.minutes}分間、自分のペースで。`;
- $('sound').setAttribute('aria-pressed',!!s.sound);$('sound').setAttribute('aria-label',s.sound?'終了音を切る':'終了音を入れる');$('sound').innerHTML=`♪<span>音 ${s.sound?'ON':'OFF'}</span>`;
+ $('sound').setAttribute('aria-pressed',!!s.sound);$('sound').setAttribute('aria-label',s.sound?'終了音を切る':'終了音を入れる');const soundHtml=`♪<span>音 ${s.sound?'ON':'OFF'}</span>`;if($('sound').innerHTML!==soundHtml)$('sound').innerHTML=soundHtml;
 }
 function tick(){if(s.running&&remaining(s)<=0){s.running=false;s.remaining=0;s.endAt=0;save();release();chime();tell(s.mode==='focus'?'時間です。おつかれさまでした！':'休憩が終わりました。');}render();}
 $('start').addEventListener('click',()=>{unlockAudio();if(s.running){s.remaining=remaining(s);s.running=false;release();}else{if(s.remaining<=0)s.remaining=s.minutes*60000;s.endAt=Date.now()+s.remaining;s.running=true;wake();}tell('');save();render();});
 $('reset').addEventListener('click',reset);
 $('sound').addEventListener('click',()=>{s.sound=!s.sound;if(s.sound)unlockAudio();save();render();});
 function setMinutes(value){if(!Number.isInteger(value)||value<1||value>s.scale){$('minutes').value=s.minutes;tell(`1〜${s.scale}分の整数で設定してください。`);return;}s.minutes=value;$('minutes').value=value;reset();}
+$('minutes').addEventListener('input',e=>{const value=Number(e.target.value);if(Number.isInteger(value)&&value>=1&&value<=s.scale){s.minutes=value;reset();}});
 $('minutes').addEventListener('change',e=>setMinutes(Number(e.target.value)));
+$('minutes').addEventListener('blur',e=>{if(!s.running)setMinutes(Number(e.target.value));});
 $('scale').addEventListener('change',e=>{s.scale=Number(e.target.value);s.minutes=Math.min(s.minutes,s.scale);$('minutes').value=s.minutes;drawScale();reset();});
 document.querySelectorAll('[data-minutes]').forEach(el=>el.addEventListener('click',()=>setMinutes(Number(el.dataset.minutes))));
 document.querySelectorAll('[data-mode]').forEach(el=>el.addEventListener('click',()=>{s.mode=el.dataset.mode;const values=s.mode==='focus'?[15,25,50]:[5,10,15];document.querySelectorAll('[data-minutes]').forEach((b,i)=>{b.dataset.minutes=values[i];b.textContent=values[i]+'分';});setMinutes(s.mode==='focus'?25:5);}));
